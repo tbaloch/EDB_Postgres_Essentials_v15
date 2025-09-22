@@ -1,15 +1,204 @@
 <!doctype html>
-<html>
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <title>PostgreSQL MCQ Quiz</title>
-  </head>
-  <body>
-    <div id="app"></div>
-    <script>
-      // you can mount your quiz here (the canvas app code can be pasted inline or in a separate js file)
-      document.getElementById('app').innerHTML = '<h1>PostgreSQL MCQ Quiz</h1>';
-    </script>
-  </body>
-</html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>PostgreSQL MCQ Quiz</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <style>
+    :root {
+      --bg: #0f172a;         /* slate-900 */
+      --card: #111827;       /* gray-900 */
+      --muted: #94a3b8;      /* slate-400 */
+      --text: #e5e7eb;       /* gray-200 */
+      --accent: #22c55e;     /* green-500 */
+      --warn: #f59e0b;       /* amber-500 */
+      --danger: #ef4444;     /* red-500 */
+      --btn: #1f2937;        /* gray-800 */
+      --btn2: #0ea5e9;       /* sky-500 */
+      --border: #1f2937;     /* gray-800 */
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, "Helvetica Neue", Arial, "Noto Sans", "Apple Color Emoji", "Segoe UI Emoji";
+      background: linear-gradient(180deg, #0b1220, #0f172a);
+      color: var(--text);
+      -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;
+      padding: 24px;
+    }
+    .container {
+      max-width: 980px; margin: 0 auto;
+    }
+    .header {
+      display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 16px;
+    }
+    .title { font-size: 20px; font-weight: 700; letter-spacing: .2px; }
+    .muted { color: var(--muted); font-size: 13px; }
+    .card {
+      background: rgba(17,24,39,.9);
+      border: 1px solid var(--border);
+      border-radius: 16px; padding: 18px;
+      box-shadow: 0 10px 30px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.03);
+    }
+    .row { display: flex; gap: 12px; flex-wrap: wrap; }
+    .spacer { height: 8px; }
+    .progress {
+      height: 8px; background: #0b1220; border-radius: 999px; overflow: hidden; border: 1px solid var(--border);
+    }
+    .bar { height: 100%; background: linear-gradient(90deg, #0ea5e9, #22c55e); width: 0%; transition: width .25s ease; }
+    .qtext { font-size: 18px; font-weight: 600; line-height: 1.45; }
+    .opts { display: grid; gap: 10px; margin-top: 12px; }
+    .opt {
+      display: flex; align-items: center; gap: 10px;
+      padding: 12px 14px; border-radius: 12px;
+      border: 1px solid var(--border);
+      background: #0b1220;
+      cursor: pointer; user-select: none;
+      transition: transform .05s ease, border-color .15s ease, background .15s ease;
+    }
+    .opt:hover { transform: translateY(-1px); border-color: #22314a; }
+    .opt input { accent-color: #22c55e; transform: scale(1.15); }
+    .opt.correct { border-color: rgba(34,197,94,.65); background: rgba(16,185,129,.08); }
+    .opt.wrong   { border-color: rgba(239,68,68,.55); background: rgba(239,68,68,.06); }
+    .foot {
+      display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between; margin-top: 14px;
+    }
+    .btn {
+      background: var(--btn); color: #e5e7eb; border: 1px solid var(--border);
+      padding: 10px 14px; border-radius: 12px; cursor: pointer;
+      transition: transform .05s ease, background .2s ease, border-color .2s ease;
+      font-weight: 600; font-size: 14px;
+    }
+    .btn:hover { transform: translateY(-1px); border-color: #22314a; }
+    .btn.primary { background: #0ea5e9; border-color: #0284c7; color: white; }
+    .btn.success { background: #22c55e; border-color: #16a34a; color: white; }
+    .btn.warn { background: #f59e0b; border-color: #d97706; color: black; }
+    .btn.ghost { background: transparent; }
+    .pill {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 6px 10px; border-radius: 999px; border: 1px solid var(--border);
+      background: #0b1220; color: var(--muted); font-size: 12px; font-weight: 600;
+    }
+    code.k { background: #0b1220; border:1px solid var(--border); padding:3px 6px; border-radius:8px; }
+    textarea {
+      width: 100%; min-height: 160px; background: #0b1220; color: var(--text);
+      border: 1px solid var(--border); border-radius: 12px; padding: 10px; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+    }
+    details { border:1px solid var(--border); border-radius:12px; padding:10px 12px; background:#0b1220; }
+    summary { cursor:pointer; font-weight:700; }
+    .small { font-size: 12px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div>
+        <div class="title">PostgreSQL MCQ Practice</div>
+        <div class="muted">answers stay hidden until you click <em>Show answer</em></div>
+      </div>
+      <div class="pill"><span id="score">Score: 0 / 0</span></div>
+    </div>
+
+    <div class="card">
+      <div class="row" style="align-items:center; justify-content:space-between;">
+        <div class="muted">Progress</div>
+        <div class="muted"><span id="ctr">1</span> / <span id="total">30</span></div>
+      </div>
+      <div class="progress"><div class="bar" id="bar"></div></div>
+      <div class="spacer"></div>
+
+      <div id="qwrap">
+        <div class="qtext" id="qtext"></div>
+        <div class="opts" id="opts"></div>
+      </div>
+
+      <div class="foot">
+        <div class="row">
+          <button class="btn" id="prevBtn">← Prev</button>
+          <button class="btn" id="nextBtn">Next →</button>
+          <button class="btn primary" id="checkBtn">Check</button>
+          <button class="btn warn" id="revealBtn">Show answer</button>
+          <button class="btn ghost" id="resetBtn">Reset</button>
+        </div>
+        <div class="muted small" id="feedback"></div>
+      </div>
+    </div>
+
+    <div class="spacer"></div>
+
+    <details>
+      <summary>Import / Export questions (JSON)</summary>
+      <div class="spacer"></div>
+      <div class="row">
+        <button class="btn" id="exportBtn">Export JSON</button>
+        <button class="btn" id="importBtn">Import (paste below)</button>
+      </div>
+      <div class="spacer"></div>
+      <textarea id="jsonArea" placeholder='[ { "q": "...", "opts": ["A","B","C","D"], "ans": 2 } ]'></textarea>
+      <div class="spacer"></div>
+      <div class="muted small">Tip: keep exactly four options per question; <code class="k">ans</code> is 0-based (0..3).</div>
+    </details>
+  </div>
+
+  <script>
+    // ----- Question Bank (30) -----
+    const QUESTIONS = [
+      // Section 1: Basics
+      { q: "Which of the following is the default port number for PostgreSQL?", opts: ["1521","3306","5432","1433"], ans: 2 },
+      { q: "PostgreSQL follows which type of database model?", opts: ["Hierarchical","Relational","Key-Value","Document"], ans: 1 },
+      { q: "Which process is responsible for writing WAL records to disk?", opts: ["Checkpointer","WAL writer","Background writer","Autovacuum"], ans: 1 },
+      { q: "The pg_hba.conf file is used to configure:", opts: ["Database replication slots","Host-based authentication","Database initialization parameters","Connection pooling"], ans: 1 },
+      { q: "Which of the following is NOT a default database created during PostgreSQL installation?", opts: ["template0","postgres","template1","production"], ans: 3 },
+
+      // Section 2: SQL & Data Types
+      { q: "Which SQL command is used to change ownership of a table?", opts: ["ALTER TABLE","GRANT","REASSIGN OWNED","ALTER OWNER"], ans: 0 },
+      { q: "What is the default transaction isolation level in PostgreSQL?", opts: ["SERIALIZABLE","READ COMMITTED","REPEATABLE READ","READ UNCOMMITTED"], ans: 1 },
+      { q: "Which data type is best suited for fixed-length character strings?", opts: ["VARCHAR(n)","CHAR(n)","TEXT","BYTEA"], ans: 1 },
+      { q: "Which clause is used to remove duplicate rows in a SELECT query?", opts: ["FILTER","GROUP BY","DISTINCT","UNIQUE"], ans: 2 },
+      { q: "In PostgreSQL, which function returns the current database user?", opts: ["CURRENT_USER","USER_NAME()","SESSION_USER","DB_USER()"], ans: 0 },
+
+      // Section 3: Administration
+      { q: "Which file stores runtime configuration parameters that persist across restarts?", opts: ["postgresql.conf","pg_ident.conf","postgresql.auto.conf","recovery.conf"], ans: 2 },
+      { q: "Which command shows all current connections to the database?", opts: ["\\du","\\conninfo","\\l","SELECT * FROM pg_stat_activity;"], ans: 3 },
+      { q: "The VACUUM command is used for:", opts: ["Backing up data","Cleaning dead tuples","Checking integrity constraints","Analyzing table indexes"], ans: 1 },
+      { q: "Which parameter controls the location of WAL files?", opts: ["data_directory","archive_mode","wal_level","pg_wal"], ans: 3 },
+      { q: "Which role attribute grants the ability to create new roles?", opts: ["CREATEDB","CREATEROLE","SUPERUSER","LOGIN"], ans: 1 },
+
+      // Section 4: Backup & Recovery
+      { q: "Which tool is used to create a logical backup?", opts: ["pg_basebackup","pg_restore","pg_dump","psql"], ans: 2 },
+      { q: "Which of the following is NOT supported by pg_basebackup?", opts: ["Streaming replication","WAL archiving","Point-in-time recovery","Parallel table dump"], ans: 3 },
+      { q: "In point-in-time recovery, which file signals the server to start in recovery mode?", opts: ["postgresql.conf","standby.signal","recovery.signal","archive.conf"], ans: 2 },
+      { q: "The –Fc option in pg_dump creates:", opts: ["SQL script file","Directory format backup","Custom format backup","Tar format backup"], ans: 2 },
+      { q: "Which command restores a backup taken using pg_dump in custom format?", opts: ["pg_restore","pg_basebackup","psql < dump.sql","COPY FROM"], ans: 0 },
+
+      // Section 5: Performance & Monitoring
+      { q: "Which command shows the query execution plan?", opts: ["ANALYZE","EXPLAIN","VACUUM","TRACE"], ans: 1 },
+      { q: "Which tool provides detailed runtime statistics for queries?", opts: ["pg_stat_statements","pg_ctl","pg_basebackup","pgbench"], ans: 0 },
+      { q: "What does the autovacuum process do?", opts: ["Backup WAL files","Monitor database locks","Clean dead tuples and analyze statistics","Archive data to tape"], ans: 2 },
+      { q: "Which of the following can help improve read performance?", opts: ["Increasing checkpoint_timeout","Adding indexes","Disabling WAL logging","Reducing shared_buffers"], ans: 1 },
+      { q: "The parameter work_mem affects:", opts: ["Maximum size of a table","Memory per sort operation","Maximum WAL size","Buffer cache size"], ans: 1 },
+
+      // Section 6: Replication & High Availability
+      { q: "Which parameter must be set on a primary for streaming replication?", opts: ["max_wal_senders","hot_standby","archive_mode","wal_compression"], ans: 0 },
+      { q: "Which process applies WAL changes on a standby server?", opts: ["WAL writer","Startup process","Checkpointer","Background writer"], ans: 1 },
+      { q: "What is the purpose of a replication slot?", opts: ["To reduce WAL size","To ensure WAL retention for standbys","To increase checkpoint frequency","To manage connection pooling"], ans: 1 },
+      { q: "Which file triggers a server to run in standby mode?", opts: ["standby.signal","archive.signal","wal_keep.signal","recovery.signal"], ans: 0 },
+      { q: "Which command promotes a standby server to primary?", opts: ["pg_ctl promote","ALTER SYSTEM PROMOTE","SELECT promote_standby();","pg_restore promote"], ans: 0 }
+    ];
+
+    // ----- App State -----
+    let idx = 0;
+    const selected = Array(QUESTIONS.length).fill(null); // user choices per question
+    const revealed = Array(QUESTIONS.length).fill(false); // show/hide correct answer per question
+
+    const qtext = document.getElementById("qtext");
+    const optsEl = document.getElementById("opts");
+    const feedback = document.getElementById("feedback");
+    const ctr = document.getElementById("ctr");
+    const total = document.getElementById("total");
+    const bar = document.getElementById("bar");
+    const scoreEl = document.getElementById("score");
+    total.textContent = QUESTIONS.length.toString();
+
+    // ----- Render -----
+    function render() {
+      const q = QUESTI
