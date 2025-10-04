@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>PostgreSQL MCQ Quiz</title>
+  <div class="title">EDB PostgreSQL MCQ Practice</div>
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <style>
     :root { --bg:#0f172a; --card:#111827; --muted:#94a3b8; --text:#e5e7eb; --accent:#22c55e; --warn:#f59e0b; --danger:#ef4444; --btn:#1f2937; --btn2:#0ea5e9; --border:#1f2937; }
@@ -50,11 +50,18 @@
     </div>
 
     <!-- Question Generator -->
-    <div class="card" style="margin-bottom:20px;">
-      <h3>Generate Quiz</h3>
-      <label for="numQuestions">Number of questions (20–100): </label>
-      <input type="number" id="numQuestions" min="20" max="100" value="30" />
-      <button class="btn primary" id="generateBtn">Generate</button>
+    <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 1rem;">
+      <label for="numQuestions" style="font-weight: bold;">Generate Quiz:</label>
+      <span>Number of questions (20–100):</span>
+      <input 
+        id="numQuestions" 
+        type="number" 
+        value="30" 
+        min="20" 
+        max="100" 
+        style="width: 70px; padding: 4px;"
+      >
+      <button onclick="generateQuiz()">Generate</button>
     </div>
 
     <div class="card">
