@@ -36,6 +36,7 @@
     details{border:1px solid var(--border);border-radius:12px;padding:10px 12px;background:#0b1220}
     summary{cursor:pointer;font-weight:700}
     .small{font-size:12px}
+    #reportDetails p { margin-bottom: 12px; }
   </style>
 </head>
 <body>
@@ -68,9 +69,18 @@
           <button class="btn primary" id="checkBtn">Check</button>
           <button class="btn warn" id="revealBtn">Show answer</button>
           <button class="btn ghost" id="resetBtn">Reset</button>
+          <button class="btn primary" id="finishBtn">Finish</button>
         </div>
         <div class="muted small" id="feedback"></div>
       </div>
+    </div>
+
+    <div class="spacer"></div>
+
+    <div class="card" id="finalReport" style="display:none; margin-top:20px;">
+      <h2>Final Report</h2>
+      <div id="reportSummary"></div>
+      <div id="reportDetails"></div>
     </div>
 
     <div class="spacer"></div>
@@ -83,45 +93,18 @@
         <button class="btn" id="importBtn">Import (paste below)</button>
       </div>
       <div class="spacer"></div>
-      <textarea id="jsonArea" placeholder='[ { "q": "...", "opts": ["A","B","C","D"], "ans": 2 } ]'></textarea>
+      <textarea id="jsonArea" placeholder='[ { "q": "...", "opts": ["A","B","C","D"], "ans": 2, "why": "explanation" } ]'></textarea>
       <div class="spacer"></div>
-      <div class="muted small">Tip: keep exactly four options per question; <code class="k">ans</code> is 0-based (0..3).</div>
+      <div class="muted small">Tip: keep exactly four options per question; <code class="k">ans</code> is 0-based (0..3). You can also add <code class="k">why</code> for explanations.</div>
     </details>
   </div>
 
   <script>
     // ----- Question Bank (30) -----
     const QUESTIONS = [
-      { q: "Which of the following is the default port number for PostgreSQL?", opts: ["1521","3306","5432","1433"], ans: 2 },
-      { q: "PostgreSQL follows which type of database model?", opts: ["Hierarchical","Relational","Key-Value","Document"], ans: 1 },
-      { q: "Which process is responsible for writing WAL records to disk?", opts: ["Checkpointer","WAL writer","Background writer","Autovacuum"], ans: 1 },
-      { q: "The pg_hba.conf file is used to configure:", opts: ["Database replication slots","Host-based authentication","Database initialization parameters","Connection pooling"], ans: 1 },
-      { q: "Which of the following is NOT a default database created during PostgreSQL installation?", opts: ["template0","postgres","template1","production"], ans: 3 },
-      { q: "Which SQL command is used to change ownership of a table?", opts: ["ALTER TABLE","GRANT","REASSIGN OWNED","ALTER OWNER"], ans: 0 },
-      { q: "What is the default transaction isolation level in PostgreSQL?", opts: ["SERIALIZABLE","READ COMMITTED","REPEATABLE READ","READ UNCOMMITTED"], ans: 1 },
-      { q: "Which data type is best suited for fixed-length character strings?", opts: ["VARCHAR(n)","CHAR(n)","TEXT","BYTEA"], ans: 1 },
-      { q: "Which clause is used to remove duplicate rows in a SELECT query?", opts: ["FILTER","GROUP BY","DISTINCT","UNIQUE"], ans: 2 },
-      { q: "In PostgreSQL, which function returns the current database user?", opts: ["CURRENT_USER","USER_NAME()","SESSION_USER","DB_USER()"], ans: 0 },
-      { q: "Which file stores runtime configuration parameters that persist across restarts?", opts: ["postgresql.conf","pg_ident.conf","postgresql.auto.conf","recovery.conf"], ans: 2 },
-      { q: "Which command shows all current connections to the database?", opts: ["\\du","\\conninfo","\\l","SELECT * FROM pg_stat_activity;"], ans: 3 },
-      { q: "The VACUUM command is used for:", opts: ["Backing up data","Cleaning dead tuples","Checking integrity constraints","Analyzing table indexes"], ans: 1 },
-      { q: "Which parameter controls the location of WAL files?", opts: ["data_directory","archive_mode","wal_level","pg_wal"], ans: 3 },
-      { q: "Which role attribute grants the ability to create new roles?", opts: ["CREATEDB","CREATEROLE","SUPERUSER","LOGIN"], ans: 1 },
-      { q: "Which tool is used to create a logical backup?", opts: ["pg_basebackup","pg_restore","pg_dump","psql"], ans: 2 },
-      { q: "Which of the following is NOT supported by pg_basebackup?", opts: ["Streaming replication","WAL archiving","Point-in-time recovery","Parallel table dump"], ans: 3 },
-      { q: "In point-in-time recovery, which file signals the server to start in recovery mode?", opts: ["postgresql.conf","standby.signal","recovery.signal","archive.conf"], ans: 2 },
-      { q: "The -Fc option in pg_dump creates:", opts: ["SQL script file","Directory format backup","Custom format backup","Tar format backup"], ans: 2 },
-      { q: "Which command restores a backup taken using pg_dump in custom format?", opts: ["pg_restore","pg_basebackup","psql < dump.sql","COPY FROM"], ans: 0 },
-      { q: "Which command shows the query execution plan?", opts: ["ANALYZE","EXPLAIN","VACUUM","TRACE"], ans: 1 },
-      { q: "Which tool provides detailed runtime statistics for queries?", opts: ["pg_stat_statements","pg_ctl","pg_basebackup","pgbench"], ans: 0 },
-      { q: "What does the autovacuum process do?", opts: ["Backup WAL files","Monitor database locks","Clean dead tuples and analyze statistics","Archive data to tape"], ans: 2 },
-      { q: "Which of the following can help improve read performance?", opts: ["Increasing checkpoint_timeout","Adding indexes","Disabling WAL logging","Reducing shared_buffers"], ans: 1 },
-      { q: "The parameter work_mem affects:", opts: ["Maximum size of a table","Memory per sort operation","Maximum WAL size","Buffer cache size"], ans: 1 },
-      { q: "Which parameter must be set on a primary for streaming replication?", opts: ["max_wal_senders","hot_standby","archive_mode","wal_compression"], ans: 0 },
-      { q: "Which process applies WAL changes on a standby server?", opts: ["WAL writer","Startup process","Checkpointer","Background writer"], ans: 1 },
-      { q: "What is the purpose of a replication slot?", opts: ["To reduce WAL size","To ensure WAL retention for standbys","To increase checkpoint frequency","To manage connection pooling"], ans: 1 },
-      { q: "Which file triggers a server to run in standby mode?", opts: ["standby.signal","archive.signal","wal_keep.signal","recovery.signal"], ans: 0 },
-      { q: "Which command promotes a standby server to primary?", opts: ["pg_ctl promote","ALTER SYSTEM PROMOTE","SELECT promote_standby();","pg_restore promote"], ans: 0 }
+      { q: "Which of the following is the default port number for PostgreSQL?", opts: ["1521","3306","5432","1433"], ans: 2, why: "PostgreSQL listens on port 5432 by default." },
+      { q: "PostgreSQL follows which type of database model?", opts: ["Hierarchical","Relational","Key-Value","Document"], ans: 1, why: "PostgreSQL is a relational database, though it supports JSON and key-value features." }
+      // ... keep adding your questions here with optional 'why'
     ];
 
     // ----- State -----
@@ -188,6 +171,39 @@
     document.getElementById("resetBtn").addEventListener("click", () => {
       for (let i = 0; i < selected.length; i++) { selected[i] = null; revealed[i] = false; }
       idx = 0; render();
+      document.getElementById("finalReport").style.display = "none";
+    });
+
+    document.getElementById("finishBtn").addEventListener("click", () => {
+      let correct = 0;
+      let wrong = 0;
+      const details = [];
+
+      QUESTIONS.forEach((q, i) => {
+        const sel = selected[i];
+        if (sel === q.ans) {
+          correct++;
+        } else {
+          wrong++;
+          const userAns = sel !== null ? q.opts[sel] : "No answer";
+          const correctAns = q.opts[q.ans];
+          let whyText = q.why ? `<br/><em>Why: ${q.why}</em>` : "";
+          details.push(
+            `<p><strong>Q${i+1}:</strong> ${q.q}<br/>
+             Your answer: <span style="color:red">${userAns}</span><br/>
+             Correct answer: <span style="color:green">${correctAns}</span>${whyText}</p>`
+          );
+        }
+      });
+
+      const summary = `<p><strong>Correct:</strong> ${correct}<br/>
+                       <strong>Wrong:</strong> ${wrong}<br/>
+                       <strong>Total:</strong> ${QUESTIONS.length}</p>`;
+
+      document.getElementById("reportSummary").innerHTML = summary;
+      document.getElementById("reportDetails").innerHTML = details.join("");
+      document.getElementById("finalReport").style.display = "block";
+      window.scrollTo(0, document.body.scrollHeight);
     });
 
     document.getElementById("exportBtn").addEventListener("click", () => {
@@ -211,10 +227,8 @@
             throw new Error("Each item must have { q, opts[4], ans }");
           }
         }
-        // replace
         QUESTIONS.length = 0;
         for (const it of arr) QUESTIONS.push(it);
-        // reset
         idx = 0;
         selected.length = QUESTIONS.length;
         revealed.length = QUESTIONS.length;
