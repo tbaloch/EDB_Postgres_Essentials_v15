@@ -49,10 +49,18 @@
       <div class="pill"><span id="score">Score: 0 / 0</span></div>
     </div>
 
+    <!-- Question Generator -->
+    <div class="card" style="margin-bottom:20px;">
+      <h3>Generate Quiz</h3>
+      <label for="numQuestions">Number of questions (20–100): </label>
+      <input type="number" id="numQuestions" min="20" max="100" value="30" />
+      <button class="btn primary" id="generateBtn">Generate</button>
+    </div>
+
     <div class="card">
       <div class="row" style="align-items:center; justify-content:space-between;">
         <div class="muted">Progress</div>
-        <div class="muted"><span id="ctr">1</span> / <span id="total">30</span></div>
+        <div class="muted"><span id="ctr">1</span> / <span id="total">0</span></div>
       </div>
       <div class="progress"><div class="bar" id="bar"></div></div>
       <div class="spacer"></div>
@@ -100,17 +108,19 @@
   </div>
 
   <script>
-    // ----- Question Bank (30) -----
-    const QUESTIONS = [
+    // ----- Master Question Bank (extendable to 100+) -----
+    const MASTER_QUESTIONS = [
       { q: "Which of the following is the default port number for PostgreSQL?", opts: ["1521","3306","5432","1433"], ans: 2, why: "PostgreSQL listens on port 5432 by default." },
-      { q: "PostgreSQL follows which type of database model?", opts: ["Hierarchical","Relational","Key-Value","Document"], ans: 1, why: "PostgreSQL is a relational database, though it supports JSON and key-value features." }
-      // ... keep adding your questions here with optional 'why'
+      { q: "PostgreSQL follows which type of database model?", opts: ["Hierarchical","Relational","Key-Value","Document"], ans: 1, why: "PostgreSQL is a relational database, though it supports JSON and key-value features." },
+      { q: "Which process is responsible for writing WAL records to disk?", opts: ["Checkpointer","WAL writer","Background writer","Autovacuum"], ans: 1, why: "The WAL writer process ensures WAL records are flushed efficiently." },
+      { q: "The pg_hba.conf file is used to configure:", opts: ["Replication slots","Host-based authentication","Database initialization parameters","Connection pooling"], ans: 1, why: "pg_hba.conf controls host-based authentication rules." }
+      // Add up to 100 questions here
     ];
 
-    // ----- State -----
+    let QUESTIONS = [];
     let idx = 0;
-    const selected = Array(QUESTIONS.length).fill(null);
-    const revealed = Array(QUESTIONS.length).fill(false);
+    let selected = [];
+    let revealed = [];
 
     const qtext = document.getElementById("qtext");
     const optsEl = document.getElementById("opts");
@@ -119,9 +129,27 @@
     const total = document.getElementById("total");
     const bar = document.getElementById("bar");
     const scoreEl = document.getElementById("score");
-    total.textContent = QUESTIONS.length.toString();
+
+    function shuffle(arr) {
+      return arr.sort(() => Math.random() - 0.5);
+    }
+
+    function generateQuiz(n) {
+      if (n < 20 || n > 100) {
+        alert("Please select between 20 and 100 questions.");
+        return;
+      }
+      QUESTIONS = shuffle(MASTER_QUESTIONS).slice(0, n);
+      idx = 0;
+      selected = Array(QUESTIONS.length).fill(null);
+      revealed = Array(QUESTIONS.length).fill(false);
+      total.textContent = QUESTIONS.length.toString();
+      document.getElementById("finalReport").style.display = "none";
+      render();
+    }
 
     function render() {
+      if (!QUESTIONS.length) return;
       const q = QUESTIONS[idx];
       ctr.textContent = (idx + 1).toString();
       bar.style.width = `${((idx + 1) / QUESTIONS.length) * 100}%`;
@@ -160,20 +188,15 @@
 
     document.getElementById("prevBtn").addEventListener("click", () => { idx = Math.max(0, idx - 1); render(); });
     document.getElementById("nextBtn").addEventListener("click", () => { idx = Math.min(QUESTIONS.length - 1, idx + 1); render(); });
-
     document.getElementById("checkBtn").addEventListener("click", () => {
       const s = selected[idx];
       if (s === null) { feedback.textContent = "Select an option first."; return; }
-      feedback.textContent = (s === QUESTIONS[idx].ans) ? "Correct ✔" : "Incorrect ✖ (answer is hidden until you click “Show answer”)";
+      feedback.textContent = (s === QUESTIONS[idx].ans) ? "Correct ✔" : "Incorrect ✖ (answer hidden until Show answer)";
     });
-
     document.getElementById("revealBtn").addEventListener("click", () => { revealed[idx] = !revealed[idx]; render(); });
-    document.getElementById("resetBtn").addEventListener("click", () => {
-      for (let i = 0; i < selected.length; i++) { selected[i] = null; revealed[i] = false; }
-      idx = 0; render();
-      document.getElementById("finalReport").style.display = "none";
-    });
+    document.getElementById("resetBtn").addEventListener("click", () => { selected.fill(null); revealed.fill(false); idx = 0; render(); });
 
+    // Finish button with clickable review
     document.getElementById("finishBtn").addEventListener("click", () => {
       let correct = 0;
       let wrong = 0;
@@ -189,9 +212,13 @@
           const correctAns = q.opts[q.ans];
           let whyText = q.why ? `<br/><em>Why: ${q.why}</em>` : "";
           details.push(
-            `<p><strong>Q${i+1}:</strong> ${q.q}<br/>
-             Your answer: <span style="color:red">${userAns}</span><br/>
-             Correct answer: <span style="color:green">${correctAns}</span>${whyText}</p>`
+            `<p>
+              <a href="#" class="reviewLink" data-idx="${i}">
+                <strong>Q${i+1}:</strong> ${q.q}
+              </a><br/>
+              Your answer: <span style="color:red">${userAns}</span><br/>
+              Correct answer: <span style="color:green">${correctAns}</span>${whyText}
+            </p>`
           );
         }
       });
@@ -203,11 +230,25 @@
       document.getElementById("reportSummary").innerHTML = summary;
       document.getElementById("reportDetails").innerHTML = details.join("");
       document.getElementById("finalReport").style.display = "block";
+
+      // clickable review
+      document.querySelectorAll(".reviewLink").forEach(link => {
+        link.addEventListener("click", (e) => {
+          e.preventDefault();
+          const i = parseInt(link.getAttribute("data-idx"));
+          idx = i;
+          revealed[idx] = true;
+          render();
+          window.scrollTo({ top: 0, behavior: "smooth" });
+        });
+      });
+
       window.scrollTo(0, document.body.scrollHeight);
     });
 
+    // Import/Export
     document.getElementById("exportBtn").addEventListener("click", () => {
-      const data = JSON.stringify(QUESTIONS, null, 2);
+      const data = JSON.stringify(MASTER_QUESTIONS, null, 2);
       const blob = new Blob([data], { type: "application/json" });
       const a = document.createElement("a");
       a.href = URL.createObjectURL(blob);
@@ -215,31 +256,26 @@
       a.click();
       URL.revokeObjectURL(a.href);
     });
-
     document.getElementById("importBtn").addEventListener("click", () => {
       const txt = document.getElementById("jsonArea").value.trim();
-      if (!txt) { alert("Paste JSON in the textbox first."); return; }
+      if (!txt) { alert("Paste JSON first."); return; }
       try {
         const arr = JSON.parse(txt);
         if (!Array.isArray(arr) || !arr.length) throw new Error("invalid array");
-        for (const it of arr) {
-          if (typeof it.q !== "string" || !Array.isArray(it.opts) || it.opts.length !== 4 || typeof it.ans !== "number") {
-            throw new Error("Each item must have { q, opts[4], ans }");
-          }
-        }
-        QUESTIONS.length = 0;
-        for (const it of arr) QUESTIONS.push(it);
-        idx = 0;
-        selected.length = QUESTIONS.length;
-        revealed.length = QUESTIONS.length;
-        for (let i = 0; i < QUESTIONS.length; i++) { selected[i] = null; revealed[i] = false; }
-        document.getElementById("total").textContent = String(QUESTIONS.length);
-        render();
-        alert("Imported question bank ✔");
+        MASTER_QUESTIONS.length = 0;
+        for (const it of arr) MASTER_QUESTIONS.push(it);
+        alert("Imported question bank ✔ — Now generate a quiz.");
       } catch (e) { alert("Import failed: " + e.message); }
     });
 
-    render();
+    // Generate initial quiz
+    document.getElementById("generateBtn").addEventListener("click", () => {
+      const n = parseInt(document.getElementById("numQuestions").value);
+      generateQuiz(n);
+    });
+
+    // default quiz with 30 questions
+    generateQuiz(30);
   </script>
 </body>
 </html>
