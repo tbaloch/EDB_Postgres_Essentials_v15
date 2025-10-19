@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
+  <title>PostgreSQL MCQ Quiz</title>
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <style>
     :root { --bg:#0f172a; --card:#111827; --muted:#94a3b8; --text:#e5e7eb; --accent:#22c55e; --warn:#f59e0b; --danger:#ef4444; --btn:#1f2937; --btn2:#0ea5e9; --border:#1f2937; }
@@ -24,7 +25,7 @@
     .opt.correct{border-color:rgba(34,197,94,.65);background:rgba(16,185,129,.08)}
     .opt.wrong{border-color:rgba(239,68,68,.55);background:rgba(239,68,68,.06)}
     .foot{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;margin-top:14px}
-    .btn{background:var(--btn);color:#e5e7eb;border:1px solid var(--border);padding:10px 14px;border-radius:12px;cursor:pointer;transition:transform .05s ease,background .2s ease,border-color .2s ease;font-weight:600;font-size:14px}
+    .btn{background:var(--btn);color:var(--text);border:1px solid var(--border);padding:10px 14px;border-radius:12px;cursor:pointer;transition:transform .05s ease,background .2s ease,border-color .2s ease;font-weight:600;font-size:14px}
     .btn:hover{transform:translateY(-1px);border-color:#22314a}
     .btn.primary{background:#0ea5e9;border-color:#0284c7;color:#fff}
     .btn.warn{background:#f59e0b;border-color:#d97706;color:#000}
@@ -35,32 +36,29 @@
     details{border:1px solid var(--border);border-radius:12px;padding:10px 12px;background:#0b1220}
     summary{cursor:pointer;font-weight:700}
     .small{font-size:12px}
-    #reportDetails p { margin-bottom: 12px; }
   </style>
 </head>
 <body>
   <div class="container">
     <div class="header">
       <div>
-        <div class="title">EDB PostgreSQL MCQ Practice</div>
+        <div class="title">PostgreSQL MCQ Practice</div>
         <div class="muted">answers stay hidden until you click <em>Show answer</em></div>
       </div>
       <div class="pill"><span id="score">Score: 0 / 0</span></div>
     </div>
 
-    <!-- Question Generator -->
-    <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 1rem;">
-      <label for="numQuestions" style="font-weight: bold;">Generate Quiz:</label>
-      <span>Number of questions (20–100):</span>
-      <input 
-        id="numQuestions" 
-        type="number" 
-        value="30" 
-        min="20" 
-        max="100" 
-        style="width: 70px; padding: 4px;"
-      >
-      <button onclick="generateQuiz()">Generate</button>
+    <!-- Question count selector -->
+    <div class="row" style="margin-bottom:12px;">
+      <label for="qcount">Number of questions:</label>
+      <select id="qcount">
+        <option value="10">10</option>
+        <option value="20">20</option>
+        <option value="30" selected>30</option>
+        <option value="50">50</option>
+        <option value="100">100</option>
+      </select>
+      <button class="btn primary" id="generateBtn">Generate Quiz</button>
     </div>
 
     <div class="card">
@@ -83,18 +81,9 @@
           <button class="btn primary" id="checkBtn">Check</button>
           <button class="btn warn" id="revealBtn">Show answer</button>
           <button class="btn ghost" id="resetBtn">Reset</button>
-          <button class="btn primary" id="finishBtn">Finish</button>
         </div>
         <div class="muted small" id="feedback"></div>
       </div>
-    </div>
-
-    <div class="spacer"></div>
-
-    <div class="card" id="finalReport" style="display:none; margin-top:20px;">
-      <h2>Final Report</h2>
-      <div id="reportSummary"></div>
-      <div id="reportDetails"></div>
     </div>
 
     <div class="spacer"></div>
@@ -107,26 +96,18 @@
         <button class="btn" id="importBtn">Import (paste below)</button>
       </div>
       <div class="spacer"></div>
-      <textarea id="jsonArea" placeholder='[ { "q": "...", "opts": ["A","B","C","D"], "ans": 2, "why": "explanation" } ]'></textarea>
+      <textarea id="jsonArea" placeholder='[ { "q": "...", "opts": ["A","B","C","D"], "ans": 2 } ]'></textarea>
       <div class="spacer"></div>
-      <div class="muted small">Tip: keep exactly four options per question; <code class="k">ans</code> is 0-based (0..3). You can also add <code class="k">why</code> for explanations.</div>
+      <div class="muted small">Tip: keep exactly four options per question; <code class="k">ans</code> is 0-based (0..3).</div>
     </details>
   </div>
 
   <script>
-    // ----- Master Question Bank (extendable to 100+) -----
-    const MASTER_QUESTIONS = [
-      { q: "Which of the following is the default port number for PostgreSQL?", opts: ["1521","3306","5432","1433"], ans: 2, why: "PostgreSQL listens on port 5432 by default." },
-      { q: "PostgreSQL follows which type of database model?", opts: ["Hierarchical","Relational","Key-Value","Document"], ans: 1, why: "PostgreSQL is a relational database, though it supports JSON and key-value features." },
-      { q: "Which process is responsible for writing WAL records to disk?", opts: ["Checkpointer","WAL writer","Background writer","Autovacuum"], ans: 1, why: "The WAL writer process ensures WAL records are flushed efficiently." },
-      { q: "The pg_hba.conf file is used to configure:", opts: ["Replication slots","Host-based authentication","Database initialization parameters","Connection pooling"], ans: 1, why: "pg_hba.conf controls host-based authentication rules." }
-      // Add up to 100 questions here
-    ];
-
-    let QUESTIONS = [];
+    const QUESTIONS = [];
+    let ACTIVE = [];
     let idx = 0;
-    let selected = [];
-    let revealed = [];
+    const selected = [];
+    const revealed = [];
 
     const qtext = document.getElementById("qtext");
     const optsEl = document.getElementById("opts");
@@ -136,29 +117,16 @@
     const bar = document.getElementById("bar");
     const scoreEl = document.getElementById("score");
 
-    function shuffle(arr) {
-      return arr.sort(() => Math.random() - 0.5);
-    }
-
-    function generateQuiz(n) {
-      if (n < 20 || n > 100) {
-        alert("Please select between 20 and 100 questions.");
-        return;
-      }
-      QUESTIONS = shuffle(MASTER_QUESTIONS).slice(0, n);
-      idx = 0;
-      selected = Array(QUESTIONS.length).fill(null);
-      revealed = Array(QUESTIONS.length).fill(false);
-      total.textContent = QUESTIONS.length.toString();
-      document.getElementById("finalReport").style.display = "none";
-      render();
+    function pickRandom(n) {
+      const shuffled = [...QUESTIONS].sort(() => Math.random() - 0.5);
+      return shuffled.slice(0, n);
     }
 
     function render() {
-      if (!QUESTIONS.length) return;
-      const q = QUESTIONS[idx];
+      if (!ACTIVE.length) return;
+      const q = ACTIVE[idx];
       ctr.textContent = (idx + 1).toString();
-      bar.style.width = `${((idx + 1) / QUESTIONS.length) * 100}%`;
+      bar.style.width = `${((idx + 1) / ACTIVE.length) * 100}%`;
       qtext.textContent = q.q;
       feedback.textContent = "";
 
@@ -184,77 +152,31 @@
       });
 
       document.getElementById("prevBtn").disabled = idx === 0;
-      document.getElementById("nextBtn").disabled = idx === QUESTIONS.length - 1;
+      document.getElementById("nextBtn").disabled = idx === ACTIVE.length - 1;
 
-      const scored = selected.reduce((acc, s, k) => acc + (s === QUESTIONS[k].ans ? 1 : 0), 0);
+      const scored = selected.reduce((acc, s, k) => acc + (s === ACTIVE[k].ans ? 1 : 0), 0);
       const attempts = selected.filter(v => v !== null).length;
       scoreEl.textContent = `Score: ${scored} / ${attempts}`;
       document.getElementById("revealBtn").textContent = revealed[idx] ? "Hide answer" : "Show answer";
     }
 
     document.getElementById("prevBtn").addEventListener("click", () => { idx = Math.max(0, idx - 1); render(); });
-    document.getElementById("nextBtn").addEventListener("click", () => { idx = Math.min(QUESTIONS.length - 1, idx + 1); render(); });
+    document.getElementById("nextBtn").addEventListener("click", () => { idx = Math.min(ACTIVE.length - 1, idx + 1); render(); });
+
     document.getElementById("checkBtn").addEventListener("click", () => {
       const s = selected[idx];
       if (s === null) { feedback.textContent = "Select an option first."; return; }
-      feedback.textContent = (s === QUESTIONS[idx].ans) ? "Correct ✔" : "Incorrect ✖ (answer hidden until Show answer)";
+      feedback.textContent = (s === ACTIVE[idx].ans) ? "Correct ✔" : "Incorrect ✖ (answer is hidden until you click “Show answer”)";
     });
+
     document.getElementById("revealBtn").addEventListener("click", () => { revealed[idx] = !revealed[idx]; render(); });
-    document.getElementById("resetBtn").addEventListener("click", () => { selected.fill(null); revealed.fill(false); idx = 0; render(); });
-
-    // Finish button with clickable review
-    document.getElementById("finishBtn").addEventListener("click", () => {
-      let correct = 0;
-      let wrong = 0;
-      const details = [];
-
-      QUESTIONS.forEach((q, i) => {
-        const sel = selected[i];
-        if (sel === q.ans) {
-          correct++;
-        } else {
-          wrong++;
-          const userAns = sel !== null ? q.opts[sel] : "No answer";
-          const correctAns = q.opts[q.ans];
-          let whyText = q.why ? `<br/><em>Why: ${q.why}</em>` : "";
-          details.push(
-            `<p>
-              <a href="#" class="reviewLink" data-idx="${i}">
-                <strong>Q${i+1}:</strong> ${q.q}
-              </a><br/>
-              Your answer: <span style="color:red">${userAns}</span><br/>
-              Correct answer: <span style="color:green">${correctAns}</span>${whyText}
-            </p>`
-          );
-        }
-      });
-
-      const summary = `<p><strong>Correct:</strong> ${correct}<br/>
-                       <strong>Wrong:</strong> ${wrong}<br/>
-                       <strong>Total:</strong> ${QUESTIONS.length}</p>`;
-
-      document.getElementById("reportSummary").innerHTML = summary;
-      document.getElementById("reportDetails").innerHTML = details.join("");
-      document.getElementById("finalReport").style.display = "block";
-
-      // clickable review
-      document.querySelectorAll(".reviewLink").forEach(link => {
-        link.addEventListener("click", (e) => {
-          e.preventDefault();
-          const i = parseInt(link.getAttribute("data-idx"));
-          idx = i;
-          revealed[idx] = true;
-          render();
-          window.scrollTo({ top: 0, behavior: "smooth" });
-        });
-      });
-
-      window.scrollTo(0, document.body.scrollHeight);
+    document.getElementById("resetBtn").addEventListener("click", () => {
+      for (let i = 0; i < selected.length; i++) { selected[i] = null; revealed[i] = false; }
+      idx = 0; render();
     });
 
-    // Import/Export
     document.getElementById("exportBtn").addEventListener("click", () => {
-      const data = JSON.stringify(MASTER_QUESTIONS, null, 2);
+      const data = JSON.stringify(QUESTIONS, null, 2);
       const blob = new Blob([data], { type: "application/json" });
       const a = document.createElement("a");
       a.href = URL.createObjectURL(blob);
@@ -262,26 +184,46 @@
       a.click();
       URL.revokeObjectURL(a.href);
     });
+
     document.getElementById("importBtn").addEventListener("click", () => {
       const txt = document.getElementById("jsonArea").value.trim();
-      if (!txt) { alert("Paste JSON first."); return; }
+      if (!txt) { alert("Paste JSON in the textbox first."); return; }
       try {
         const arr = JSON.parse(txt);
         if (!Array.isArray(arr) || !arr.length) throw new Error("invalid array");
-        MASTER_QUESTIONS.length = 0;
-        for (const it of arr) MASTER_QUESTIONS.push(it);
-        alert("Imported question bank ✔ — Now generate a quiz.");
+        for (const it of arr) {
+          if (typeof it.q !== "string" || !Array.isArray(it.opts) || it.opts.length !== 4 || typeof it.ans !== "number") {
+            throw new Error("Each item must have { q, opts[4], ans }");
+          }
+        }
+        QUESTIONS.length = 0;
+        for (const it of arr) QUESTIONS.push(it);
+
+        const n = parseInt(document.getElementById("qcount").value, 10);
+        ACTIVE = pickRandom(n);
+        idx = 0;
+        selected.length = ACTIVE.length;
+        revealed.length = ACTIVE.length;
+        for (let i = 0; i < ACTIVE.length; i++) { selected[i] = null; revealed[i] = false; }
+        document.getElementById("total").textContent = String(ACTIVE.length);
+        render();
+        alert("Imported question bank ✔");
       } catch (e) { alert("Import failed: " + e.message); }
     });
 
-    // Generate initial quiz
     document.getElementById("generateBtn").addEventListener("click", () => {
-      const n = parseInt(document.getElementById("numQuestions").value);
-      generateQuiz(n);
+      if (!QUESTIONS.length) { alert("Import questions first."); return; }
+      const n = parseInt(document.getElementById("qcount").value, 10);
+      ACTIVE = pickRandom(n);
+      idx = 0;
+      selected.length = ACTIVE.length;
+      revealed.length = ACTIVE.length;
+      for (let i = 0; i < ACTIVE.length; i++) { selected[i] = null; revealed[i] = false; }
+      document.getElementById("total").textContent = String(ACTIVE.length);
+      render();
     });
 
-    // default quiz with 30 questions
-    generateQuiz(30);
+    render();
   </script>
 </body>
 </html>
