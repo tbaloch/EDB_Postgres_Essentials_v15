@@ -36,6 +36,8 @@
     details{border:1px solid var(--border);border-radius:12px;padding:10px 12px;background:#0b1220}
     summary{cursor:pointer;font-weight:700}
     .small{font-size:12px}
+    #report{display:none;margin-top:20px;padding:15px;border:1px solid var(--border);border-radius:12px;background:#111827}
+    #report h2{margin-top:0}
   </style>
 </head>
 <body>
@@ -81,10 +83,13 @@
           <button class="btn primary" id="checkBtn">Check</button>
           <button class="btn warn" id="revealBtn">Show answer</button>
           <button class="btn ghost" id="resetBtn">Reset</button>
+          <button class="btn primary" id="finishBtn">Finish Quiz</button>
         </div>
         <div class="muted small" id="feedback"></div>
       </div>
     </div>
+
+    <div id="report"></div>
 
     <div class="spacer"></div>
 
@@ -117,8 +122,18 @@
     const bar = document.getElementById("bar");
     const scoreEl = document.getElementById("score");
 
+    function uniqueQuestions(arr) {
+      const seen = new Set();
+      return arr.filter(q => {
+        if (seen.has(q.q)) return false;
+        seen.add(q.q);
+        return true;
+      });
+    }
+
     function pickRandom(n) {
-      const shuffled = [...QUESTIONS].sort(() => Math.random() - 0.5);
+      const uniq = uniqueQuestions(QUESTIONS);
+      const shuffled = [...uniq].sort(() => Math.random() - 0.5);
       return shuffled.slice(0, n);
     }
 
@@ -175,6 +190,27 @@
       idx = 0; render();
     });
 
+    document.getElementById("finishBtn").addEventListener("click", () => {
+      let reportHTML = `<h2>Quiz Report</h2>`;
+      const scored = selected.reduce((acc, s, k) => acc + (s === ACTIVE[k].ans ? 1 : 0), 0);
+      reportHTML += `<p>Score: ${scored} / ${ACTIVE.length}</p>`;
+
+      ACTIVE.forEach((q, i) => {
+        const userAns = selected[i] !== null ? q.opts[selected[i]] : "No answer";
+        const correctAns = q.opts[q.ans];
+        const isCorrect = selected[i] === q.ans;
+        reportHTML += `<div style="margin-bottom:12px;">
+          <strong>Q${i+1}:</strong> ${q.q}<br>
+          Your Answer: ${userAns} ${isCorrect ? "✅" : "❌"}<br>
+          Correct Answer: ${correctAns}
+        </div>`;
+      });
+
+      document.getElementById("report").innerHTML = reportHTML;
+      document.getElementById("report").style.display = "block";
+      window.scrollTo({ top: document.getElementById("report").offsetTop, behavior: 'smooth' });
+    });
+
     document.getElementById("exportBtn").addEventListener("click", () => {
       const data = JSON.stringify(QUESTIONS, null, 2);
       const blob = new Blob([data], { type: "application/json" });
@@ -196,8 +232,9 @@
             throw new Error("Each item must have { q, opts[4], ans }");
           }
         }
+        const uniq = uniqueQuestions(arr);
         QUESTIONS.length = 0;
-        for (const it of arr) QUESTIONS.push(it);
+        for (const it of uniq) QUESTIONS.push(it);
 
         const n = parseInt(document.getElementById("qcount").value, 10);
         ACTIVE = pickRandom(n);
@@ -207,7 +244,7 @@
         for (let i = 0; i < ACTIVE.length; i++) { selected[i] = null; revealed[i] = false; }
         document.getElementById("total").textContent = String(ACTIVE.length);
         render();
-        alert("Imported question bank ✔");
+        alert("Imported question bank ✔ (duplicates removed)");
       } catch (e) { alert("Import failed: " + e.message); }
     });
 
@@ -220,6 +257,7 @@
       revealed.length = ACTIVE.length;
       for (let i = 0; i < ACTIVE.length; i++) { selected[i] = null; revealed[i] = false; }
       document.getElementById("total").textContent = String(ACTIVE.length);
+      document.getElementById("report").style.display = "none";
       render();
     });
 
