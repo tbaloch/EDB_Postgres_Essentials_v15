@@ -134,17 +134,17 @@ summary{cursor:pointer;font-weight:700}
 
 #report{display:none;margin-top:20px;padding:15px;border:1px solid var(--border);border-radius:12px;background:var(--reportbg)}
 
-.toggle{
-  display:flex;
-  align-items:center;
-  gap:6px;
-  font-size:12px;
-  color:var(--muted);
-  user-select:none;
+.toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--muted);
+  user-select: none;
 }
-.toggle input{accent-color:var(--accent);transform:scale(1.05)}
-/* keep quiz body height stable for 2–10 options */
-.opts{min-height:520px}
+.toggle input {
+  accent-color: var(--accent);
+}
 
 </style>
 </head>
@@ -160,8 +160,11 @@ summary{cursor:pointer;font-weight:700}
   <div class="row">
     <button class="btn ghost" id="themeBtn" type="button">Light / Dark</button>
     
-    <label class="toggle"><input type="checkbox" id="toggleScore" checked> Show score</label>
-    <div class="pill" id="score">Score: 0 / 0</div>
+  <label class="toggle">
+    <input type="checkbox" id="toggleScore" checked>
+    Show score
+  </label>
+  <div class="pill" id="score">Score: 0 / 0</div>
   </div>
 </div>
 
@@ -226,21 +229,14 @@ const QUESTIONS=[],selected=[],revealed=[];
 let ACTIVE=[],idx=0;
 
 const qtext=Q("qtext"),opts=Q("opts"),ctr=Q("ctr"),total=Q("total"),bar=Q("bar"),score=Q("score"),fb=Q("feedback"),toggleScore=Q("toggleScore");
-const LETTERS="ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-
-function updateScore(){
-  const correct = selected.filter((v,i)=>v===ACTIVE[i].ans).length;
-  const answered = selected.filter(v=>v!=null).length;
-  score.textContent = `Score: ${correct} / ${answered}`;
-}
-
-if(toggleScore){
-  toggleScore.onchange=()=>{
+if (toggleScore) {
+  toggleScore.addEventListener("change", () => {
     score.style.display = toggleScore.checked ? "inline-flex" : "none";
-  };
-  // init
+  });
+  // initialize
   score.style.display = toggleScore.checked ? "inline-flex" : "none";
 }
+
 
 function Q(id){return document.getElementById(id)}
 function uniq(a){const s=new Set();return a.filter(q=>!s.has(q.q)&&s.add(q.q))}
@@ -260,11 +256,11 @@ function render(){
       if(i===q.ans)l.classList.add("correct");
       else if(selected[idx]===i)l.classList.add("wrong");
     }
-    l.innerHTML=`<input type="radio" name="o" ${selected[idx]===i?"checked":""}> ${LETTERS[i] || "?"}. ${o}`;
+    l.innerHTML=`<input type="radio" name="o" ${selected[idx]===i?"checked":""}> ${"ABCD"[i]}. ${o}`;
     l.onclick=()=>{selected[idx]=i;render()};
     opts.appendChild(l);
   });
-  updateScore();
+  score.textContent=`Score: ${selected.filter((v,i)=>v===ACTIVE[i].ans).length} / ${selected.filter(v=>v!=null).length}`;
 }
 
 prevBtn.onclick=()=>{if(idx>0)idx--;render()}
