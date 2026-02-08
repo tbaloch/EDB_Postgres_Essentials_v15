@@ -23,6 +23,18 @@
   --optHover:#f1f5f9;
   --reportbg:#ffffff;
   --shadow:0 10px 25px rgba(0,0,0,.08);
+  .toggle{
+    display:flex;
+    align-items:center;
+    gap:6px;
+    font-size:12px;
+    color:var(--muted);
+    user-select:none;
+  }
+  .toggle input{
+    accent-color:var(--accent);
+  }
+
 }
 
 /* dark mode */
@@ -133,19 +145,6 @@ details{border:1px solid var(--border);border-radius:12px;padding:10px;backgroun
 summary{cursor:pointer;font-weight:700}
 
 #report{display:none;margin-top:20px;padding:15px;border:1px solid var(--border);border-radius:12px;background:var(--reportbg)}
-
-.toggle {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 12px;
-  color: var(--muted);
-  user-select: none;
-}
-.toggle input {
-  accent-color: var(--accent);
-}
-
 </style>
 </head>
 
@@ -157,15 +156,10 @@ summary{cursor:pointer;font-weight:700}
     <div class="title">PostgreSQL MCQ Practice</div>
     <div class="muted">answers stay hidden until you click Show answer</div>
   </div>
-  <div class="row">
-    <button class="btn ghost" id="themeBtn" type="button">Light / Dark</button>
-    
-  <label class="toggle">
-    <input type="checkbox" id="toggleScore" checked>
-    Show score
-  </label>
-  <div class="pill" id="score">Score: 0 / 0</div>
-  </div>
+    <div class="row">
+      <button class="btn ghost" id="themeBtn" type="button">Light / Dark</button>
+      <div class="pill" id="score">Score: 0 / 0</div>
+    </div>
 </div>
 
 <div class="row" style="margin-bottom:12px;">
@@ -192,12 +186,12 @@ summary{cursor:pointer;font-weight:700}
 
   <div class="foot">
     <div class="row">
-      <button class="btn" id="prevBtn">Prev</button>
-      <button class="btn" id="nextBtn">Next</button>
-      <button class="btn primary" id="checkBtn">Check</button>
-      <button class="btn warn" id="revealBtn">Show answer</button>
-      <button class="btn ghost" id="resetBtn">Reset</button>
-      <button class="btn primary" id="finishBtn">Finish</button>
+      <button class="btn ghost" id="themeBtn" type="button">Light / Dark</button>
+      <label class="toggle">
+        <input type="checkbox" id="toggleScore" checked>
+        Show score
+      </label>
+      <div class="pill" id="score">Score: 0 / 0</div>
     </div>
     <div class="muted" id="feedback"></div>
   </div>
@@ -228,12 +222,21 @@ themeBtn.onclick=()=>{const t=document.documentElement.getAttribute("data-theme"
 const QUESTIONS=[],selected=[],revealed=[];
 let ACTIVE=[],idx=0;
 
-const qtext=Q("qtext"),opts=Q("opts"),ctr=Q("ctr"),total=Q("total"),bar=Q("bar"),score=Q("score"),fb=Q("feedback"),toggleScore=Q("toggleScore");
+const qtext=Q("qtext"),
+      opts=Q("opts"),
+      ctr=Q("ctr"),
+      total=Q("total"),
+      bar=Q("bar"),
+      score=Q("score"),
+      fb=Q("feedback"),
+      toggleScore=Q("toggleScore");
+
 if (toggleScore) {
   toggleScore.addEventListener("change", () => {
     score.style.display = toggleScore.checked ? "inline-flex" : "none";
   });
-  // initialize
+
+  // initialize on load
   score.style.display = toggleScore.checked ? "inline-flex" : "none";
 }
 
